@@ -14,12 +14,11 @@
 // Duty cycle dos LEDs
 #define RED_BASE    (100)   // vermelho 100%
 #define GREEN_BASE (35) // verde 36%
-#define BLUE_BASE  (TPM_MODULE) // azul 0% --> não entra nas contas é sempre 0
 
 
 uint16_t duty_red;         
 uint16_t duty_green;   
-uint16_t duty_blue = BLUE_BASE;
+uint16_t duty_blue;
 
 //pega a referencia da placa para ser o monitor serial
 const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
@@ -83,6 +82,7 @@ int main(void)
 {
     // Inicializa TPM2
     pwm_tpm_Init(TPM2, TPM_OSCERCLK, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
+    pwm_tpm_Init(TPM0, TPM_OSCERCLK, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
 
     /*
       FRDM-KL25Z RGB LED:
@@ -95,7 +95,7 @@ int main(void)
     // Inicializa canais PWM
     pwm_tpm_Ch_Init(TPM2,0,TPM_PWM_H,GPIOB,18); // Vermelho
     pwm_tpm_Ch_Init(TPM2,1,TPM_PWM_H,GPIOB,19); // Verde
-    pwm_tpm_Ch_Init(TPM2,2,TPM_PWM_H,GPIOD,1);  // Azul
+    pwm_tpm_Ch_Init(TPM0,1,TPM_PWM_H,GPIOD,1);  // Azul
 
     while(1)
     {
@@ -104,20 +104,28 @@ int main(void)
         intensidade = ler_int_uart();
 
     // Limites
+        printf("\r\nAqui:0");
+
         if(intensidade < 0)
             intensidade = 0;
 
         if(intensidade > 100)
             intensidade = 100;
-
+        
+        printf("\r\nAqui:1");
         duty_red   = calcula_duty(RED_BASE, intensidade);
         duty_green = calcula_duty(GREEN_BASE, intensidade);
-        duty_blue  = calcula_duty(BLUE_BASE, intensidade);
+        duty_blue  = TPM_MODULE;
 
+        printf("\r\nAqui:2");
         pwm_tpm_CnV(TPM2,0,duty_red);
+        printf("\r\nAqui:2.1");
         pwm_tpm_CnV(TPM2,1,duty_green);
-        pwm_tpm_CnV(TPM2,2,duty_blue);
+        printf("\r\nAqui:2.2");
+        pwm_tpm_CnV(TPM0,1,duty_blue);
+        printf("\r\nAqui:2.3");
 
+        printf("\r\nAqui:3");
         printf("\r\nIntensidade aplicada: %d%%\r\n", intensidade);
     }
 
