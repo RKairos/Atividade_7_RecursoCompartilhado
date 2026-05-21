@@ -1,20 +1,68 @@
 #include <zephyr/kernel.h>             // Funções básicas do Zephyr (ex: k_msleep, k_thread, etc.)
 #include <zephyr/device.h>             // API para obter e utilizar dispositivos do sistema
 #include <zephyr/drivers/gpio.h>       // API para controle de pinos de entrada/saída (GPIO)
-#include <pwm_z42.h>                // Biblioteca personalizada com funções de controle do TPM (Timer/PWM Module)
+#include <pwm_z42.h> 
+
+#include <zephyr/drivers/uart.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 
 // Define o valor do registrador MOD do TPM para configurar o período do PWM
 #define TPM_MODULE 1000         // Define a frequência do PWM fpwm = (TPM_CLK / (TPM_MODULE * PS))
 // Valores de duty cycle correspondentes a diferentes larguras de pulso
 // Duty cycle dos LEDs
 #define RED_BASE    (100)   // vermelho 100%
-#define GREEN_BASE (36) // verde 36%
+#define GREEN_BASE (35) // verde 36%
 #define BLUE_BASE  (TPM_MODULE) // azul 0% --> não entra nas contas é sempre 0
 
 
 uint16_t duty_red;         
 uint16_t duty_green;   
-uint16_t duty_blue = BLUE_BASE;  
+uint16_t duty_blue = BLUE_BASE;
+
+//pega a referencia da placa para ser o monitor serial
+const struct device *uart_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+
+
+int ler_int_uart(void)
+{
+    char buffer[4]; // aceita 0 até 100
+    int i = 0;
+    unsigned char c;
+
+    while(1)
+    {
+        if(uart_poll_in(uart_dev, &c) == 0)
+        {
+            // Se recebeu número, guarda no buffer
+            if(c >= '0' && c <= '9')
+            {
+                if(i < 3)
+                {
+                    buffer[i] = c;
+                    i++;
+                    uart_poll_out(uart_dev, c); // mostra o que foi digitado
+                }
+            }
+
+            // Se recebeu Enter e já tem algo digitado, encerra
+            if((c == '\r' || c == '\n') && i > 0)
+            {
+                break;
+            }
+        }
+
+        k_msleep(10);
+    }
+
+    buffer[i] = '\0';
+
+    return atoi(buffer);
+}
+
+
+
 
 int intensidade;
 
@@ -28,6 +76,8 @@ uint16_t calcula_duty(uint16_t base, int intensidade)
     // Inverte porque o LED da FRDM-KL25Z é active low
     return TPM_MODULE - brilho;
 }
+
+
 
 int main(void)
 {
@@ -47,31 +97,28 @@ int main(void)
     pwm_tpm_Ch_Init(TPM2,1,TPM_PWM_H,GPIOB,19); // Verde
     pwm_tpm_Ch_Init(TPM2,2,TPM_PWM_H,GPIOD,1);  // Azul
 
-    while (1)
+    while(1)
     {
-        printf("\nDigite a intensidade do LED laranja de 0 a 100: ");
-        scanf("%d", &intensidade);
+        printf("\r\nDigite intensidade (0-100): ");
 
-        if (intensidade < 0)
-        {
+        intensidade = ler_int_uart();
+
+    // Limites
+        if(intensidade < 0)
             intensidade = 0;
-        }
 
-        if (intensidade > 100)
-        {
+        if(intensidade > 100)
             intensidade = 100;
-        }
 
         duty_red   = calcula_duty(RED_BASE, intensidade);
         duty_green = calcula_duty(GREEN_BASE, intensidade);
         duty_blue  = calcula_duty(BLUE_BASE, intensidade);
-    
 
-        pwm_tpm_CnV(TPM2, 0, duty_red);
-        pwm_tpm_CnV(TPM2, 1, duty_green);
-        pwm_tpm_CnV(TPM2, 2, duty_blue);
+        pwm_tpm_CnV(TPM2,0,duty_red);
+        pwm_tpm_CnV(TPM2,1,duty_green);
+        pwm_tpm_CnV(TPM2,2,duty_blue);
 
-        printf("Intensidade aplicada: %d%%\n", intensidade);
+        printf("\r\nIntensidade aplicada: %d%%\r\n", intensidade);
     }
 
     return 0;
