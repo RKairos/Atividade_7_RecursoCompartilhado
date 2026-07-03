@@ -9,30 +9,31 @@ void main(void)
 
     console_init();
 
-    printk("=== Atividade 7 - Padaria ===\n");
-    printk("Escolha o modo:\n");
-    printk("1 - Parte 1: Sem sincronizacao\n");
-    printk("2 - Parte 2: Com mutex\n");
+    printk("\n===== ATIVIDADE 7 =====\n");
+    printk("1 - Parte 1 (Sem sincronizacao)\n");
+    printk("2 - Parte 2 (Mutex)\n");
+    printk("3 - Parte 3 (Semaforos)\n");
 
     while (1)
     {
         escolha = console_getchar();
 
-        if (escolha == '1')
+        switch(escolha)
         {
-            printk("\nModo escolhido: Parte 1\n");
-            padaria_parte1_init();
-            break;
-        }
-        else if (escolha == '2')
-        {
-            printk("\nModo escolhido: Parte 2\n");
-            padaria_parte2_init();
-            break;
-        }
-        else
-        {
-            printk("Digite 1 ou 2.\n");
+            case '1':
+                padaria_parte1_init();
+                return;
+
+            case '2':
+                padaria_parte2_init();
+                return;
+
+            case '3':
+                padaria_parte3_init();
+                return;
+
+            default:
+                printk("Digite apenas 1, 2 ou 3.\n");
         }
     }
 }
