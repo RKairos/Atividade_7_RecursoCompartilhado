@@ -1,6 +1,7 @@
 #ifndef PADARIA_H_
 #define PADARIA_H_
 
-void padaria_init(void);
+void padaria_parte1_init(void);
+void padaria_parte2_init(void);
 
 #endif
